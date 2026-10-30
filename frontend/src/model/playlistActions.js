@@ -22,6 +22,8 @@ const createFiles = ref([])
 const createName = ref('')
 const createDescription = ref('')
 const createSourceUrl = ref('')
+// Called with the new playlist's name once the create dialog made it.
+const createDone = ref(null)
 const addOpen = ref(false)
 const addPlaylist = ref(null)
 const renameOpen = ref(false)
@@ -76,7 +78,12 @@ export function usePlaylistActions() {
 
   function openCreate(
     files = [],
-    { name = '', description = '', sourcePlaylistUrl = '' } = {}
+    {
+      name = '',
+      description = '',
+      sourcePlaylistUrl = '',
+      onCreated = null,
+    } = {}
   ) {
     createFiles.value = files.map((item) =>
       typeof item === 'string' ? item : item.file
@@ -84,6 +91,7 @@ export function usePlaylistActions() {
     createName.value = name
     createDescription.value = description
     createSourceUrl.value = sourcePlaylistUrl
+    createDone.value = onCreated
     createOpen.value = true
   }
 
@@ -655,6 +663,7 @@ export function usePlaylistActions() {
     createName,
     createDescription,
     createSourceUrl,
+    createDone,
     addOpen,
     addPlaylist,
     renameOpen,

@@ -2071,6 +2071,16 @@ export default {
     removeArtistArtBody:
       'Това само премахва запазения файл с изображение — нищо друго не се засяга.',
   },
+  downloadTarget: {
+    choose: 'Запази в плейлист',
+    current: 'Запазване в {name}',
+    heading: 'Новите изтегляния да отиват в',
+    none: 'Само библиотеката',
+    new: 'Нов плейлист…',
+    title:
+      'Новите изтегляния се добавят към „{name}“, щом приключат. Натисни за промяна.',
+    gone: '„{name}“ вече не съществува – новите изтегляния отиват само в библиотеката',
+  },
   toast: {
     playingNext: { one: 'Ще звучи следваща', other: '{count} песни следват' },
     addedToQueue: {
@@ -2096,6 +2106,11 @@ export default {
     queuedTracks: {
       one: '{name} е в опашката',
       other: '{count} песни от {name} са в опашката',
+    },
+    queuedToPlaylist: {
+      one: '{name} е на опашка – ще се появи в „{playlist}“',
+      other:
+        '{count} песни на опашка – ще се появяват в „{playlist}“, щом приключат',
     },
     queuedMissing: {
       one: '{count} липсваща песен е в опашката',

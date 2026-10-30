@@ -2089,6 +2089,16 @@ export default {
     removeArtistArtBody:
       'Ez csak a mentett képfájlt távolítja el — semmi mást nem érint.',
   },
+  downloadTarget: {
+    choose: 'Mentés listába',
+    current: 'Mentés ide: {name}',
+    heading: 'Az új letöltések helye',
+    none: 'Csak a könyvtár',
+    new: 'Új lista…',
+    title:
+      'Az új letöltések a befejezésükkor bekerülnek a(z) „{name}” listába. Kattints a módosításhoz.',
+    gone: 'A(z) „{name}” lista már nem létezik – az új letöltések csak a könyvtárba kerülnek',
+  },
   toast: {
     playingNext: {
       one: 'Következőként szól',
@@ -2117,6 +2127,11 @@ export default {
     queuedTracks: {
       one: '{name} sorba állítva',
       other: '{count} szám sorba állítva innen: {name}',
+    },
+    queuedToPlaylist: {
+      one: '{name} sorba állítva – megjelenik itt: „{playlist}”',
+      other:
+        '{count} szám sorba állítva – a(z) „{playlist}” listában jelennek meg, ahogy elkészülnek',
     },
     queuedMissing: {
       one: '{count} hiányzó szám sorba állítva',

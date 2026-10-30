@@ -17,6 +17,7 @@ from downtify.likes import LIKED_PLAYLIST_NAME
 from downtify.m3u import MANUAL_M3U_MARKER, is_manual_m3u, write_m3u
 from downtify.manual_playlists import (
     ManualPlaylistError,
+    add_files_in_order,
     create_manual_playlist,
     detach_imported_playlist,
     drop_manual_playlist,
@@ -333,3 +334,67 @@ def test_missing_explicit_image_allows_normal_mosaic_fallback(tmp_path):
     assert path.with_suffix('.jpg').read_bytes().startswith(b'\xff\xd8')
     assert path.with_suffix('.jpg').read_bytes() != _jpeg(b'official')
     assert not has_explicit_cover(path)
+
+
+def _library(tmp_path: Path, count: int) -> tuple[LibraryContext, list[str]]:
+    download = tmp_path / 'downloads'
+    names = []
+    for number in range(1, count + 1):
+        name = f'{number:02d} Track.mp3'
+        _mp3(download / name, title=f'Track {number}', artist='Kenji Aoki')
+        names.append(name)
+    return LibraryContext(download_dir=download), names
+
+
+def test_add_in_order_follows_album_order_whatever_finishes_first(tmp_path):
+    ctx, names = _library(tmp_path, 4)
+    create_manual_playlist(ctx, 'Album')
+    # Downloads land 3, 1, 4, 2: each call passes what is done so far.
+    done: list[str] = []
+    for finished in (2, 0, 3, 1):
+        done.append(names[finished])
+        ordered = [item for item in names if item in done]
+        result = add_files_in_order(ctx, 'Album', ordered)
+    assert result['files'] == names
+    assert result['count'] == 4
+
+
+def test_add_in_order_keeps_existing_songs_and_appends_the_rest(tmp_path):
+    ctx, names = _library(tmp_path, 3)
+    create_manual_playlist(ctx, 'Mix')
+    edit_manual_playlist(ctx, 'Mix', add=[names[2]])
+    result = add_files_in_order(ctx, 'Mix', names)
+    # The batch lists names[2] after them: they go in front of it.
+    assert result['files'] == names
+    assert result['added'] == 2
+    again = add_files_in_order(ctx, 'Mix', names)
+    assert again['added'] == 0
+    assert again['files'] == names
+    # Without that neighbour in the batch, they simply go to the end.
+    other, other_names = _library(tmp_path / 'other', 3)
+    create_manual_playlist(other, 'Mix')
+    edit_manual_playlist(other, 'Mix', add=[other_names[2]])
+    tail = add_files_in_order(other, 'Mix', other_names[:2])
+    assert tail['files'] == [other_names[2], *other_names[:2]]
+
+
+def test_add_in_order_single_file_goes_to_the_end(tmp_path):
+    ctx, names = _library(tmp_path, 2)
+    create_manual_playlist(ctx, 'Mix')
+    edit_manual_playlist(ctx, 'Mix', add=[names[1]])
+    result = add_files_in_order(ctx, 'Mix', [names[0]])
+    assert result['files'] == [names[1], names[0]]
+
+
+def test_add_in_order_refuses_imported_missing_and_unknown(tmp_path):
+    ctx, names = _library(tmp_path, 1)
+    write_m3u(ctx.download_dir, 'Spotify Hits', [{'filename': names[0]}])
+    with pytest.raises(ManualPlaylistError) as imported:
+        add_files_in_order(ctx, 'Spotify Hits', [names[0]])
+    assert imported.value.status_code == 403
+    with pytest.raises(ManualPlaylistError) as missing:
+        add_files_in_order(ctx, 'Nope', [names[0]])
+    assert missing.value.status_code == 404
+    create_manual_playlist(ctx, 'Mix')
+    with pytest.raises(ManualPlaylistError):
+        add_files_in_order(ctx, 'Mix', ['ghost.mp3'])

@@ -37,3 +37,20 @@ When the songs of a playlist download finish after a restart, its [M3U](m3u-expo
 ## API
 
 [`GET /api/queue/state`](../api-reference.md#get-apiqueuestate), [`POST /api/queue/pause`](../api-reference.md#post-apiqueuepause) and [`POST /api/queue/resume`](../api-reference.md#post-apiqueueresume); every change is also a `queue_state` [WebSocket](../api-reference.md#websocket) frame.
+
+## Downloading straight into a playlist
+
+Pick one of your own Library playlists before you download (the **Save to
+a playlist** button on album, playlist and top-songs pages, or the icon in
+the top bar) and every song you queue is added to it the moment it
+finishes, so the playlist fills up as the queue runs. An album keeps its
+track order whatever order the downloads finish in. You can create a new
+playlist from the same menu. The choice is remembered in the browser and
+shown in the top bar; pick **Just the library** to turn it off. Songs
+already in your library are added too, and a playlist that no longer exists
+is forgotten automatically.
+
+API: a song row (in `POST /api/download/batch` or `POST /api/download/url`)
+may carry `downtify_target_playlist`, the name of a playlist the caller can
+edit. An unknown or read-only playlist fails the request with 404/403
+before anything is queued.

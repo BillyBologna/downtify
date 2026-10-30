@@ -84,10 +84,14 @@ async function submit() {
   if (!title || saving.value) return
   saving.value = true
   try {
-    await actions.createNamed(title, actions.createFiles.value, {
-      sourcePlaylistUrl: actions.createSourceUrl.value,
-    })
+    const created = await actions.createNamed(
+      title,
+      actions.createFiles.value,
+      { sourcePlaylistUrl: actions.createSourceUrl.value }
+    )
+    const done = actions.createDone.value
     close()
+    done?.(created)
   } catch {
     /* toast in createNamed's caller — wrap createNamed */
   } finally {

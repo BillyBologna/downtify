@@ -4,6 +4,7 @@ import { reactive, ref } from 'vue'
 import { isYouTubePlaylistURL, normalizeSpotifyURL } from '/src/model/url'
 
 import API from '/src/model/api'
+import { withTarget } from '/src/model/downloadTarget'
 import { useSettingsManager } from '/src/model/settings'
 
 const STATUS = {
@@ -303,11 +304,13 @@ export function useDownloadManager() {
     { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
   ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
-    const songs = list.map((song, i) => ({
-      ...song,
-      ...hints,
-      downtify_track_order: song.downtify_track_order ?? i,
-    }))
+    const songs = list.map((song, i) =>
+      withTarget({
+        ...song,
+        ...hints,
+        downtify_track_order: song.downtify_track_order ?? i,
+      })
+    )
     batchQueueChanges(() => {
       for (const song of songs) upsertSong(song)
     })
@@ -382,9 +385,12 @@ export function useDownloadManager() {
   }
 
   function queue(song, beginDownload = true) {
-    upsertSong(song)
-    if (beginDownload) return download(song)
-    return Promise.resolve({ song, filename: null })
+    // The chosen playlist travels with the song, so a retry of this row
+    // lands in the same playlist.
+    const target = withTarget(song)
+    upsertSong(target)
+    if (beginDownload) return download(target)
+    return Promise.resolve({ song: target, filename: null })
   }
 
   // A job that replaced a library file's audio (song.replace) is retried

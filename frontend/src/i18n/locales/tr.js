@@ -2069,6 +2069,16 @@ export default {
     removeArtistArtBody:
       'Bu yalnızca kaydedilen görsel dosyasını kaldırır — başka hiçbir şeyi etkilemez.',
   },
+  downloadTarget: {
+    choose: 'Bir çalma listesine kaydet',
+    current: '{name} listesine kaydediliyor',
+    heading: 'Yeni indirmeleri şuraya koy',
+    none: 'Yalnızca kitaplık',
+    new: 'Yeni çalma listesi…',
+    title:
+      'Yeni indirmeler biter bitmez “{name}” listesine eklenir. Değiştirmek için tıkla.',
+    gone: '“{name}” artık yok — yeni indirmeler yalnızca kitaplığa gider',
+  },
   toast: {
     playingNext: {
       one: 'Sıradaki olarak çalacak',
@@ -2097,6 +2107,11 @@ export default {
     queuedTracks: {
       one: '{name} kuyruğa alındı',
       other: '{name} içinden {count} parça kuyruğa alındı',
+    },
+    queuedToPlaylist: {
+      one: '{name} sıraya alındı — “{playlist}” listesinde görünecek',
+      other:
+        '{count} parça sıraya alındı — bittikçe “{playlist}” listesinde görünecek',
     },
     queuedMissing: {
       one: '{count} eksik parça kuyruğa alındı',

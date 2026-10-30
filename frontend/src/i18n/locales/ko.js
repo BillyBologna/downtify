@@ -2068,6 +2068,16 @@ export default {
     removeArtistArtBody:
       '저장된 이미지 파일만 삭제되며 다른 데이터에는 영향을 주지 않습니다.',
   },
+  downloadTarget: {
+    choose: '재생목록에 저장',
+    current: '{name}에 저장 중',
+    heading: '새 다운로드를 넣을 곳',
+    none: '라이브러리만',
+    new: '새 재생목록…',
+    title:
+      '새 다운로드는 완료되는 대로 “{name}”에 추가됩니다. 클릭하여 변경하세요.',
+    gone: '“{name}”이(가) 더 이상 없습니다. 새 다운로드는 라이브러리에만 저장됩니다',
+  },
   toast: {
     playingNext: {
       one: '다음 곡으로 재생',
@@ -2095,6 +2105,11 @@ export default {
     queuedTracks: {
       one: '{name} 대기열에 추가됨',
       other: '{name}에서 트랙 {count}개 대기열에 추가됨',
+    },
+    queuedToPlaylist: {
+      one: '{name}을(를) 대기열에 추가했습니다. “{playlist}”에 표시됩니다',
+      other:
+        '{count}곡을 대기열에 추가했습니다. 완료되는 대로 “{playlist}”에 표시됩니다',
     },
     queuedMissing: {
       one: '누락된 트랙 {count}개 대기열에 추가됨',

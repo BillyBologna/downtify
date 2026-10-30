@@ -2082,6 +2082,16 @@ export default {
     removeArtistArtBody:
       'Isso só remove o arquivo de imagem salvo — nada mais é afetado.',
   },
+  downloadTarget: {
+    choose: 'Salvar em uma playlist',
+    current: 'Salvando em {name}',
+    heading: 'Colocar novos downloads em',
+    none: 'Apenas a biblioteca',
+    new: 'Nova playlist…',
+    title:
+      'Os novos downloads são adicionados a “{name}” assim que terminam. Clique para mudar.',
+    gone: '“{name}” não existe mais — os novos downloads vão só para a biblioteca',
+  },
   toast: {
     playingNext: { one: 'Tocará a seguir', other: '{count} faixas a seguir' },
     addedToQueue: {
@@ -2107,6 +2117,11 @@ export default {
     queuedTracks: {
       one: '{name} na fila',
       other: '{count} faixas de {name} na fila',
+    },
+    queuedToPlaylist: {
+      one: '{name} na fila — aparecerá em “{playlist}”',
+      other:
+        '{count} faixas na fila — aparecem em “{playlist}” conforme terminam',
     },
     queuedMissing: {
       one: '{count} faixa faltante na fila',

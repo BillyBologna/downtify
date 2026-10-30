@@ -183,6 +183,73 @@ def edit_manual_playlist(
     }
 
 
+@_serialized
+def add_files_in_order(
+    ctx: LibraryContext, name: str, ordered: list[str]
+) -> dict[str, Any]:
+    """Add *ordered* library files to a manual playlist, keeping their
+    relative order.
+
+    A download that lands in a playlist finishes track by track, in no
+    particular order. Each new file goes right after the nearest earlier
+    file of *ordered* that the playlist already has (or right before the
+    nearest later one), so an album fills its playlist in track order
+    however its downloads finish. A file the playlist already holds stays
+    where it is; a file with no neighbour yet goes to the end.
+    """
+
+    path = m3u.find_m3u_for_name(ctx.download_dir, name)
+    if path is None:
+        raise ManualPlaylistError(
+            f'Playlist {name!r} was not found', status_code=404
+        )
+    _require_manual(path, path.stem)
+    wanted: list[str] = []
+    for raw in ordered:
+        stored = str(raw or '').strip().replace('\\', '/')
+        if stored and stored not in wanted:
+            wanted.append(stored)
+    files = _read_files(ctx, path)
+    present = set(files)
+    added = 0
+    for index, stored in enumerate(wanted):
+        if stored in present:
+            continue
+        if len(files) >= MAX_TRACKS_PER_EDIT:
+            raise ManualPlaylistError(
+                f'Playlists can hold at most {MAX_TRACKS_PER_EDIT} tracks'
+            )
+        if resolve_library_file(stored, ctx) is None:
+            raise ManualPlaylistError(f'Track not in the library: {stored}')
+        position = len(files)
+        before = next(
+            (item for item in reversed(wanted[:index]) if item in present),
+            None,
+        )
+        if before is not None:
+            position = files.index(before) + 1
+        else:
+            after = next(
+                (item for item in wanted[index + 1 :] if item in present),
+                None,
+            )
+            if after is not None:
+                position = files.index(after)
+        files.insert(position, stored)
+        present.add(stored)
+        added += 1
+    if added:
+        path = _write(ctx, files, path)
+        files = _read_files(ctx, path)
+    return {
+        'name': path.stem,
+        'manual': True,
+        'files': files,
+        'count': len(files),
+        'added': added,
+    }
+
+
 def detach_imported_playlist(ctx: LibraryContext, name: str) -> dict[str, Any]:
     """Turn an imported playlist into a Library one (tracks kept).
 

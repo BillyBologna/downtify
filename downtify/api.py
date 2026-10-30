@@ -145,7 +145,10 @@ downloads are shared, and files are never stored twice.
   ``"source": "deezer"`` body is taken as-is instead, see
   ``_song_from_download_request``)
 * ``POST /api/download/batch`` (JSON body ``{songs, playlist_url,
-  generate_m3u}``; instead of ``playlist_url`` a caller may pass an
+  generate_m3u}``; a song row may carry ``downtify_target_playlist`` - the
+  name of one of the caller's own editable Library playlists: each song
+  is added to it, in the batch's track order, as soon as it is downloaded
+  (the same hint works in the body of ``POST /api/download/url``); instead of ``playlist_url`` a caller may pass an
   explicit ``playlist_name`` and ``cover_url`` - e.g. an artist's top
   songs selection, which isn't backed by a real playlist id; a Deezer
   ``playlist_url`` gets the same per-playlist folder, M3U and cover as a
@@ -540,6 +543,7 @@ from .loudness import LoudnessAnalyzer
 from .lyrics_cache import LyricsLookupCache
 from .manual_playlists import (
     ManualPlaylistError,
+    add_files_in_order,
     copy_playlist,
     create_manual_playlist,
     detach_imported_playlist,
@@ -4137,6 +4141,75 @@ def _note_download_owners(stored_path: str, user_ids: Collection[int]) -> None:
             _note_download_owner(stored_path, waiter)
 
 
+# A song row's ``downtify_target_playlist`` names the manual playlist the
+# download is added to the moment it lands in the library.
+TARGET_PLAYLIST_KEY = 'downtify_target_playlist'
+
+
+def _target_playlist_of(song: dict[str, Any]) -> str:
+    return str(song.get(TARGET_PLAYLIST_KEY) or '').strip()
+
+
+def _checked_target_playlist(name: object, request: Optional[Request]) -> str:
+    """*name* as the stored playlist name, when the caller may add songs
+    to it (their own Library playlist, or one shared with them as an
+    editor); ``''`` for no playlist."""
+
+    text = str(name or '').strip()
+    if not text:
+        return ''
+    entry = require_playlist_visible(text, request)
+    editable = bool(entry.get('mine', True) or entry.get('can_edit_tracks'))
+    if not entry.get('manual') or not editable:
+        raise HTTPException(
+            status_code=403,
+            detail='Songs can only be added to a playlist you can edit',
+        )
+    return str(entry.get('name') or text)
+
+
+def _apply_target_playlist(
+    songs: list[Any], request: Optional[Request]
+) -> None:
+    """Check every row's target playlist (once per name) before anything
+    is queued, so a stale or foreign name fails the request instead of
+    downloading songs that land nowhere."""
+
+    checked: dict[str, str] = {}
+    for song in songs:
+        if not isinstance(song, dict):
+            continue
+        raw = _target_playlist_of(song)
+        if not raw:
+            song.pop(TARGET_PLAYLIST_KEY, None)
+            continue
+        if raw not in checked:
+            checked[raw] = _checked_target_playlist(raw, request)
+        song[TARGET_PLAYLIST_KEY] = checked[raw]
+
+
+async def _file_into_target_playlist(name: str, files: list[str]) -> None:
+    """Add finished downloads to the manual playlist *name* in the order
+    given (best effort: the download itself already succeeded)."""
+
+    files = [item for item in files if item]
+    if not name or not files:
+        return
+    try:
+        result = await asyncio.to_thread(
+            add_files_in_order, library_context(), name, files
+        )
+    except ManualPlaylistError as exc:
+        logger.warning('Could not add songs to playlist {!r}: {}', name, exc)
+        return
+    except Exception:
+        logger.exception('Could not add songs to playlist {!r}', name)
+        return
+    if result.get('added'):
+        invalidate_library_paths_cache()
+        await announce_playlists_changed()
+
+
 def _pending_download(
     song: dict[str, Any],
     song_id: str,
@@ -4239,7 +4312,7 @@ async def _queue_turn(
     return False
 
 
-async def _run_download(
+async def _run_download_core(
     song: dict[str, Any],
     song_id: str,
     subdir: Optional[str] = None,
@@ -4351,6 +4424,25 @@ async def _run_download(
             _download_locks.pop(song_id, None)
         if not keep_pending:
             await _forget_pending([song_id])
+
+
+async def _run_download(
+    song: dict[str, Any],
+    song_id: str,
+    *args: Any,
+    add_to_target: bool = True,
+    **kwargs: Any,
+) -> Optional[str]:
+    """:func:`_run_download_core`, then the song goes to the playlist its
+    row names (``downtify_target_playlist``), whether it was downloaded
+    now, shared with another account's job or already in the library. A
+    batch passes ``add_to_target=False`` and files its songs itself, so
+    they keep their track order."""
+
+    filename = await _run_download_core(song, song_id, *args, **kwargs)
+    if add_to_target and filename:
+        await _file_into_target_playlist(_target_playlist_of(song), [filename])
+    return filename
 
 
 async def _finish_with_existing(
@@ -4625,6 +4717,11 @@ async def download_endpoint(
     pl_ctx = await asyncio.to_thread(
         _playlist_context_from_hints, client_hints
     )
+    target = _checked_target_playlist(
+        (client_hints or {}).get(TARGET_PLAYLIST_KEY), request
+    )
+    if target:
+        song[TARGET_PLAYLIST_KEY] = target
     logger.debug(
         'download/url: url={} body={} track_number={!r} year={!r} '
         'release_date={!r} playlist={!r}',
@@ -4921,6 +5018,25 @@ async def _process_batch(
         for index, (song, song_id) in enumerate(zip(songs, job_ids))
     ])
 
+    target_lock = asyncio.Lock()
+
+    async def _into_target(index: int) -> None:
+        # The songs done so far, in track order: the playlist fills up as
+        # the batch downloads, and an album ends up in its own order.
+        name = _target_playlist_of(songs[index])
+        if not name:
+            return
+        async with target_lock:
+            done = sorted(resolved, key=lambda i: _order(i, songs[i]))
+            await _file_into_target_playlist(
+                name,
+                [
+                    resolved[i] or ''
+                    for i in done
+                    if _target_playlist_of(songs[i]) == name
+                ],
+            )
+
     async def _bounded(index: int, song: dict[str, Any], song_id: str) -> None:
         try:
             filename = await _run_download(
@@ -4934,10 +5050,13 @@ async def _process_batch(
                 refresh_playlists=False,
                 user_id=user_id,
                 pending_saved=True,
+                add_to_target=False,
             )
         except Exception:
             filename = None
         resolved[index] = filename
+        if filename:
+            await _into_target(index)
         if not (filename and wants_m3u):
             return
         # Serialized so concurrent downloads can't interleave writes to
@@ -5825,6 +5944,7 @@ async def download_batch_endpoint(request: Request) -> dict[str, Any]:
         raise HTTPException(
             status_code=400, detail='songs must be a non-empty list'
         )
+    _apply_target_playlist(songs, request)
     playlist_url = str(payload.get('playlist_url') or '')
     generate_m3u = bool(payload.get('generate_m3u', True))
     # No real Spotify/YouTube Music playlist id backs this batch (e.g. an

@@ -50,6 +50,7 @@
           </span>
         </template>
         <template #actions>
+          <DownloadTargetPicker v-if="artist.songs.length" />
           <template v-if="artist.songs.length">
             <UiButton
               v-if="topSongs.newSongs.length"
@@ -110,6 +111,7 @@ import UiButton from '/src/components/ui/UiButton.vue'
 import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
+import DownloadTargetPicker from '/src/components/library/DownloadTargetPicker.vue'
 import TopSongsPanel from '/src/components/library/TopSongsPanel.vue'
 import API from '/src/model/api'
 import { useTopSongs } from '/src/model/topSongs'

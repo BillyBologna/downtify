@@ -68,6 +68,9 @@
           </span>
         </template>
         <template #actions>
+          <DownloadTargetPicker
+            v-if="details.tracks.length || details.albums.length"
+          />
           <template v-if="details.tracks.length">
             <UiButton
               v-if="newSongs.length"
@@ -271,6 +274,7 @@ import UiEmpty from '/src/components/ui/UiEmpty.vue'
 import UiIconButton from '/src/components/ui/UiIconButton.vue'
 import UiSkeleton from '/src/components/ui/UiSkeleton.vue'
 import CollectionHero from '/src/components/library/CollectionHero.vue'
+import DownloadTargetPicker from '/src/components/library/DownloadTargetPicker.vue'
 import { knownArtistPhoto } from '/src/lib/artistPhotoProxy'
 import DownloadState from '/src/components/search/DownloadState.vue'
 import SimilarButton from '/src/components/similar/SimilarButton.vue'
@@ -283,6 +287,7 @@ import {
   useDownloadManager,
   useProgressTracker,
 } from '/src/model/download'
+import { useDownloadTarget } from '/src/model/downloadTarget'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
 import { songDownloadState } from '/src/lib/downloadState'
@@ -299,6 +304,7 @@ const dm = useDownloadManager()
 const tracker = useProgressTracker()
 const library = useLibrary()
 const playlistActions = usePlaylistActions()
+const downloadTarget = useDownloadTarget()
 const ui = useUi()
 
 const details = ref(null)
@@ -516,11 +522,23 @@ async function download(songs) {
       ...song,
       downtify_track_order: details.value.tracks.indexOf(song),
     }))
+    // Read before queueing: the picker may change while this runs.
+    const chosen = downloadTarget.target.value
     const count = await dm.fromSongs(withOrder, {
       playlistUrl: isPlaylist ? url.value : '',
     })
     selected.value = new Set()
-    ui.toast(t('toast.queuedTracks', { count, name: details.value.name }), {
+    const playlist =
+      playlistActions.manuals().find((item) => item.name === chosen)?.title ||
+      chosen
+    const message = chosen
+      ? t('toast.queuedToPlaylist', {
+          count,
+          name: details.value.name,
+          playlist,
+        })
+      : t('toast.queuedTracks', { count, name: details.value.name })
+    ui.toast(message, {
       kind: 'success',
       action: {
         label: t('nav.queue'),
