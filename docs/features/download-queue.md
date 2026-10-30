@@ -40,15 +40,21 @@ When the songs of a playlist download finish after a restart, its [M3U](m3u-expo
 
 ## Downloading straight into a playlist
 
-Pick one of your own Library playlists before you download (the **Save to
-a playlist** button on album, playlist and top-songs pages, or the icon in
-the top bar) and every song you queue is added to it the moment it
-finishes, so the playlist fills up as the queue runs. An album keeps its
-track order whatever order the downloads finish in. You can create a new
-playlist from the same menu. The choice is remembered in the browser and
-shown in the top bar; pick **Just the library** to turn it off. Songs
-already in your library are added too, and a playlist that no longer exists
-is forgotten automatically.
+Downloads can go straight into one of your own Library playlists: each
+song is added to it the moment it finishes, so the playlist fills up as
+the queue runs. An album keeps its track order whatever order the
+downloads finish in.
+
+- On album, playlist, artist and top-songs pages, the **Save to a
+  playlist** button picks the destination for everything you download on
+  that page (it remembers your last choice). Pick **Just the library** to
+  turn it off.
+- Anywhere else (search results, charts, album cards), pressing a
+  download button asks which playlist that download goes to. You can
+  create a new playlist from the same dialog.
+
+Songs already in your library are added too, and a remembered playlist
+that no longer exists is forgotten automatically.
 
 API: a song row (in `POST /api/download/batch` or `POST /api/download/url`)
 may carry `downtify_target_playlist`, the name of a playlist the caller can

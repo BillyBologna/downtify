@@ -1,7 +1,13 @@
-// The Library playlist new downloads are added to, picked before
-// downloading. Every song sent to the server carries it as
-// `downtify_target_playlist`; the server adds each song to that playlist
-// the moment it is downloaded, so the playlist fills up as the queue runs.
+// The Library playlist downloads are added to. Every song sent to the
+// server carries it as `downtify_target_playlist`; the server adds each
+// song to that playlist the moment it is downloaded, so the playlist
+// fills up as the queue runs.
+//
+// Two ways to choose it:
+// - A playlist picker on screen (album, artist and top-songs pages) holds
+//   the choice for the whole page: its download buttons use it silently.
+// - Anywhere else, a download button asks which playlist when pressed
+//   (see downloadPrompt.js) and passes the answer for that download only.
 import { ref, watch } from 'vue'
 
 const STORAGE_KEY = 'downtify-download-target'
@@ -17,8 +23,10 @@ function stored() {
   }
 }
 
-// The playlist's stored name (what the server knows it by), or ''.
+// The playlist's stored name (what the server knows it by), or ''. It is
+// the picker's last choice and only counts while a picker is on screen.
 const target = ref(stored())
+const pickers = ref(0)
 
 watch(
   target,
@@ -34,12 +42,20 @@ watch(
 )
 
 /**
- * The song with the chosen playlist on it. A song that already names one
- * (a retried download) keeps it; without a choice the song is untouched.
+ * The song with its playlist on it.
+ *
+ * `explicit` is a choice made for this download alone ('' = just the
+ * library). Without one, a song that already names a playlist (a retried
+ * download) keeps it, and the picker's choice applies only while a picker
+ * is on screen; otherwise the song is untouched.
  */
-export function withTarget(song) {
+export function withTarget(song, explicit) {
   if (!song || typeof song !== 'object') return song
-  if (TARGET_FIELD in song || !target.value) return song
+  if (explicit !== undefined) {
+    const { [TARGET_FIELD]: _dropped, ...rest } = song
+    return explicit ? { ...rest, [TARGET_FIELD]: explicit } : rest
+  }
+  if (TARGET_FIELD in song || !pickers.value || !target.value) return song
   return { ...song, [TARGET_FIELD]: target.value }
 }
 
@@ -50,5 +66,12 @@ export function useDownloadTarget() {
   function clear() {
     target.value = ''
   }
-  return { target, set, clear, withTarget }
+  // A picker calls these as it appears and disappears from the screen.
+  function enter() {
+    pickers.value += 1
+  }
+  function leave() {
+    pickers.value = Math.max(0, pickers.value - 1)
+  }
+  return { target, pickers, set, clear, enter, leave, withTarget }
 }

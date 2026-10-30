@@ -54,6 +54,7 @@ import CoverArt from '../ui/CoverArt.vue'
 // Display only (a Deezer cover at its medium size); the download below
 // resolves the release's own link, never this image.
 import { deezerImage } from '/src/lib/deezerImage'
+import { chooseTarget } from '/src/model/downloadPrompt'
 import { useDownloadManager } from '/src/model/download'
 import { useUi } from '/src/model/ui'
 import { useI18n } from '/src/i18n'
@@ -99,9 +100,11 @@ const subtitle = computed(() => {
 })
 
 async function download() {
+  const target = await chooseTarget()
+  if (target === null) return
   queued.value = true
   try {
-    const count = await dm.fromURL(props.release.url)
+    const count = await dm.fromURL(props.release.url, { target })
     ui.toast(t('toast.queuedTracks', { count, name: props.release.name }), {
       kind: 'success',
     })

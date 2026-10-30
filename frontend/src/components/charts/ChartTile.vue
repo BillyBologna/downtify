@@ -77,6 +77,7 @@ import CoverArt from '../ui/CoverArt.vue'
 import UiMenu from '../ui/UiMenu.vue'
 import API from '/src/model/api'
 import monitorAPI from '/src/model/monitor'
+import { chooseTarget } from '/src/model/downloadPrompt'
 import { useDownloadManager } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { usePlaylistActions } from '/src/model/playlistActions'
@@ -163,9 +164,11 @@ function failed(err) {
 }
 
 async function download() {
+  const target = await chooseTarget()
+  if (target === null) return
   queued.value = true
   try {
-    const count = await dm.fromURL(props.item.url)
+    const count = await dm.fromURL(props.item.url, { target })
     ui.toast(t('toast.queuedTracks', { count, name: props.item.name }), {
       kind: 'success',
     })

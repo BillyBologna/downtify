@@ -30,7 +30,6 @@
       </div>
       <GlobalSearch class="min-w-0 flex-1 md:max-w-xl" />
       <div class="ml-auto hidden items-center gap-1 sm:flex">
-        <DownloadTargetPicker compact />
         <UiIconButton
           icon="keyboard"
           :label="t('shortcuts.title')"
@@ -57,7 +56,6 @@ import { useRoute, useRouter } from 'vue-router'
 import AppLogo from '../ui/AppLogo.vue'
 import UiIconButton from '../ui/UiIconButton.vue'
 import GlobalSearch from './GlobalSearch.vue'
-import DownloadTargetPicker from '../library/DownloadTargetPicker.vue'
 import { useTheme } from '/src/model/theme'
 import { useI18n } from '/src/i18n'
 

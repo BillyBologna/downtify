@@ -44,6 +44,7 @@ import { computed } from 'vue'
 import AppIcon from '../ui/AppIcon.vue'
 import UiBadge from '../ui/UiBadge.vue'
 import UiProgress from '../ui/UiProgress.vue'
+import { chooseTarget } from '/src/model/downloadPrompt'
 import { useDownloadManager, useProgressTracker } from '/src/model/download'
 import { useLibrary } from '/src/model/library'
 import { songDownloadState } from '/src/lib/downloadState'
@@ -69,8 +70,11 @@ const inLibrary = computed(() => {
 
 const state = computed(() => songDownloadState(item.value, inLibrary.value))
 
-function download() {
-  if (state.value === 'failed') dm.retry(props.song)
-  else dm.queue(props.song)
+async function download() {
+  if (state.value === 'failed') return dm.retry(props.song)
+  // Without a playlist picker on screen, ask where this one goes.
+  const target = await chooseTarget()
+  if (target === null) return
+  dm.queue(props.song, true, target)
 }
 </script>

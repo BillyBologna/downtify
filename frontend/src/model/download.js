@@ -301,15 +301,18 @@ export function useDownloadManager() {
    */
   async function fromSongs(
     list,
-    { playlistUrl = '', playlistName = '', coverUrl = '', m3u } = {}
+    { playlistUrl = '', playlistName = '', coverUrl = '', m3u, target } = {}
   ) {
     const hints = playlistUrl ? { downtify_playlist_url: playlistUrl } : {}
     const songs = list.map((song, i) =>
-      withTarget({
-        ...song,
-        ...hints,
-        downtify_track_order: song.downtify_track_order ?? i,
-      })
+      withTarget(
+        {
+          ...song,
+          ...hints,
+          downtify_track_order: song.downtify_track_order ?? i,
+        },
+        target
+      )
     )
     batchQueueChanges(() => {
       for (const song of songs) upsertSong(song)
@@ -327,7 +330,7 @@ export function useDownloadManager() {
   }
 
   /** Resolve a link and queue everything it points at. */
-  async function fromURL(url) {
+  async function fromURL(url, { target } = {}) {
     loading.value = true
     try {
       const res = await API.open(url)
@@ -335,9 +338,10 @@ export function useDownloadManager() {
       if (Array.isArray(data)) {
         return await fromSongs(data, {
           playlistUrl: isPlaylistLink(url) ? url : '',
+          target,
         })
       }
-      queue(data)
+      queue(data, true, target)
       return 1
     } finally {
       loading.value = false
@@ -384,13 +388,13 @@ export function useDownloadManager() {
     }
   }
 
-  function queue(song, beginDownload = true) {
+  function queue(song, beginDownload = true, target) {
     // The chosen playlist travels with the song, so a retry of this row
     // lands in the same playlist.
-    const target = withTarget(song)
-    upsertSong(target)
-    if (beginDownload) return download(target)
-    return Promise.resolve({ song: target, filename: null })
+    const stamped = withTarget(song, target)
+    upsertSong(stamped)
+    if (beginDownload) return download(stamped)
+    return Promise.resolve({ song: stamped, filename: null })
   }
 
   // A job that replaced a library file's audio (song.replace) is retried
