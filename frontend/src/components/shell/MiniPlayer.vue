@@ -8,7 +8,7 @@
       <div class="absolute inset-x-3 bottom-0 h-0.5 bg-line-2 md:hidden">
         <div class="h-full bg-accent" :style="{ width: `${smoothPercent}%` }" />
       </div>
-      <div class="absolute inset-x-0 -top-2 hidden md:block">
+      <div class="absolute inset-x-3 top-0 hidden md:block">
         <SliderBar
           :model-value="scrub ?? player.currentTime.value"
           :max="player.duration.value || 1"
